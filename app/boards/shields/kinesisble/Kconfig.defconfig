@@ -1,0 +1,21 @@
+# Copyright (c) 2020 The ZMK Contributors
+# SPDX-License-Identifier: MIT
+
+if SHIELD_KINESISBLE
+
+config ZMK_KEYBOARD_NAME
+    default "kinesisble"
+
+config ZMK_BLE
+	default y
+
+config ZMK_USB
+	default y
+
+config ZMK_BATTERY_VOLTAGE_DIVIDER
+	default y
+
+config USB_DEVICE_MANUFACTURER
+	default "ZMK Project"
+    
+endif

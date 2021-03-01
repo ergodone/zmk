@@ -1,0 +1,271 @@
+/*
+ * Copyright (c) 2021 The ZMK Contributors
+ *
+ * SPDX-License-Identifier: MIT
+ */
+
+/*
+ * See Humble Hacker blog about updated keyboard matrix:
+ * http://humblehacker.com/blog/20100720/hacking-the-kinesis-contoured-keyboard/
+ * https://web.archive.org/web/20201101000000%2A;/http://humblehacker.com/blog/20100720/hacking-the-kinesis-contoured-keyboard/
+ * 
+ *  Wiring
+ *  All columns on MCP23s17: 
+ *  col 0-7 -> GPA0-GPA7 
+ *  col 8-15 -> GPB0-GPB6 
+ * 
+ *  Note the Kinesis BLE schematic has the labels on pins 19-25 wrong. See the picture at:
+ *  https://learn.adafruit.com/introducing-the-adafruit-nrf52840-feather/pinouts
+ *  for the labels used by the feather nexus nodes.  Also note the header differs
+ *  between the nrf52840 and nrf52832 - look at the proper feather_connector.dtsi.
+ *
+ *  Rows are direct wire to GPIO:
+ *  (schematic is 1 based)
+ *  row       nrf52      feather nexus node
+ *  row 0  -> P0.30  ->  2
+ *  row 1  -> P0.05  ->  1
+ *  row 2  -> P0.04  ->  0
+ *  row 3  -> P1.09  ->  20
+ *  row 4  -> P0.08  ->  19
+ *  row 5  -> P0.06  ->  18
+ *  row 6  -> P0.27  ->  17
+ * 
+ * Diodes are built into keyswitch.  Diode direction is row to column.
+ * Note the MCP23s17 can not do pin GPIO_PULL_DOWN for GPIO_ACTIVE_HIGH 
+ * polling.  So the polling direction is reversed by using col2row and 
+ * GPIO_ACTIVE_LOW polling is used.
+ *  
+ * Kinesis LEDs 
+ * led     nrf52      feather nexus node
+ * CAPS -> P0.28  ->  3
+ * NUM  -> P0.02  ->  4
+ * SCR  -> P0.26  ->  16
+ * KEY  -> P0.07  ->  15
+ * Power -> P0.03 ->  5
+ * 
+ * MCP23s17
+ * see column wiring above
+ * signal  nrf52      feather nexus node
+ * ^CS  -> P1.08  ->  14
+ * SCK  -> P0.14  ->  6
+ * MOSI -> P0.13  ->  7
+ * MISO -> P0.15  ->  8
+ * INTA -> N/C 
+ * INTB -> N/C 
+ * 
+ * See https://docs.zephyrproject.org/2.3.0/guides/porting/shields.html#gpio-nexus-nodes 
+ * for a description of how the feather_header nexus nodes used below work.
+ */
+
+
+#include <dt-bindings/zmk/matrix_transform.h>
+
+/ {
+    chosen {
+        zmk,kscan = &kscan0;
+        zmk,matrix_transform = &default_transform;
+        zephyr,code-partition = &code_partition;
+    };
+
+    leds {
+		compatible = "gpio-leds";
+        ledu1: led_u1 {
+            gpios = <&feather_header 3 GPIO_ACTIVE_HIGH>;
+            label = "CAP LED";
+            status = "okay";
+        };
+        ledu2: led_u2 {
+            gpios = <&feather_header 4 GPIO_ACTIVE_HIGH>;
+            label = "NUM LED";
+            status = "okay";
+        };
+        ledu3: led_u3 {
+            gpios = <&feather_header 16 GPIO_ACTIVE_HIGH>;
+            label = "SCR LED";
+            status = "okay";
+        };
+        ledu4: led_u4 {
+            gpios = <&feather_header 15 GPIO_ACTIVE_HIGH>;
+            label = "KEY LED";
+            status = "okay";
+        };
+        led_pow: led_pow {
+            gpios = <&feather_header 5 GPIO_ACTIVE_HIGH>;
+            label = "BUTTON LED";
+            status = "okay";
+        };
+    };
+
+	pwmleds {
+		compatible = "pwm-leds";
+		pwm_ledu1: pwm_led_u1 {
+			pwms = <&pwm0 28>;
+			label = "PWM CAP LED";
+		};
+		pwm_ledu2: pwm_led_u2 {
+			pwms = <&pwm0 2>;
+			label = "PWM NUM LED";
+		};
+		pwm_ledu3: pwm_led_u3 {
+			pwms = <&pwm0 26>;
+			label = "PWM SCR LED";
+		};
+        pwm_ledu4: pwm_led_u4 {
+			pwms = <&pwm0 7>;
+			label = "KEY SCR LED";
+		};
+        pwm_led_pow: pwm_led_pow {
+			pwms = <&pwm0 3>;
+			label = "PWM BUTTON LED";
+		};
+    };
+
+    kscan0: kscan {
+        compatible = "zmk,kscan-gpio-matrix";
+        label = "KSCAN";
+        
+        diode-direction = "col2row";
+        row-gpios
+            = <&feather_header 2  (GPIO_ACTIVE_LOW | GPIO_PULL_UP)>
+            , <&feather_header 1  (GPIO_ACTIVE_LOW | GPIO_PULL_UP)>
+            , <&feather_header 0  (GPIO_ACTIVE_LOW | GPIO_PULL_UP)>
+            , <&feather_header 20 (GPIO_ACTIVE_LOW | GPIO_PULL_UP)>
+            , <&feather_header 19 (GPIO_ACTIVE_LOW | GPIO_PULL_UP)>
+            , <&feather_header 18 (GPIO_ACTIVE_LOW | GPIO_PULL_UP)>
+            , <&feather_header 17 (GPIO_ACTIVE_LOW | GPIO_PULL_UP)>
+            ;
+        col-gpios
+            = <&spi_gpio 0  GPIO_ACTIVE_LOW>
+            , <&spi_gpio 1  GPIO_ACTIVE_LOW>
+            , <&spi_gpio 2  GPIO_ACTIVE_LOW>
+            , <&spi_gpio 3  GPIO_ACTIVE_LOW>
+            , <&spi_gpio 4  GPIO_ACTIVE_LOW>
+            , <&spi_gpio 5  GPIO_ACTIVE_LOW>
+            , <&spi_gpio 6  GPIO_ACTIVE_LOW>
+            , <&spi_gpio 7  GPIO_ACTIVE_LOW>
+            , <&spi_gpio 8  GPIO_ACTIVE_LOW>
+            , <&spi_gpio 9  GPIO_ACTIVE_LOW>
+            , <&spi_gpio 10 GPIO_ACTIVE_LOW>
+            , <&spi_gpio 11 GPIO_ACTIVE_LOW>
+            , <&spi_gpio 12 GPIO_ACTIVE_LOW>
+            , <&spi_gpio 13 GPIO_ACTIVE_LOW>
+            , <&spi_gpio 14 GPIO_ACTIVE_LOW>
+            , <&spi_gpio 15 GPIO_ACTIVE_LOW>
+            ;
+    };
+
+vbatt {
+		compatible = "zmk,battery-voltage-divider";
+		label = "BATTERY";
+		io-channels = <&adc 5>;
+		output-ohms = <100000>;
+		full-ohms = <(100000 + 100000)>;
+	};
+
+//
+// Matrix layout from:
+// https://web.archive.org/web/20201101000000*/http://humblehacker.com/blog/20100720/hacking-the-kinesis-contoured-keyboard/
+//    	0	1	2	3	4	5	6	7	8	9	10	11	12	13	14
+// 0    =	1	2	3	4	5	6	7	8	9	0	-	ESC	F1	F2
+// 1	TB	Q	W	E	R	T	Y	U	I	O	P		F3	F4	F5
+// 2	CP	A	S	D	F	G	H	J	K	L	;	‘	F6	F7	F8
+// 3	LS	Z	X	C	V	B	N	M	,	.	/	RS	F9	F10	F11
+// 4	X2	`	IN	LT		RT	UP		DN	[	]	X1	F12	PS	SL
+// 5			SL1	SL2		SL5	SR4	SR3	SR6				PB	PG	KY
+// 6				SL4	SL3	SL6	SR1		SR2	SR5				
+// 
+default_transform: keymap_transform_0 {
+        compatible = "zmk,matrix-transform";
+        columns = <15>;
+        rows = <7>;
+   map = <
+   RC(0,12)  RC(0,13)  RC(0,14)  RC(1,12)  RC(1,13)  RC(1,14)  RC(2,12)  RC(2,13)  RC(2,14) RC(3,12)  RC(3,13)  RC(3,14)  RC(4,12)  RC(4,13)  RC(4,14)  RC(5,12)  RC(5,14)  RC(5,13)
+   RC(0,0)  RC(0,1)  RC(0,2)  RC(0,3)  RC(0,4)  RC(0,5)             RC(0,6)  RC(0,7)  RC(0,8)  RC(0,9)  RC(0,10)  RC(0,11)
+   RC(1,0)  RC(1,1)  RC(1,2)  RC(1,3)  RC(1,4)  RC(1,5)             RC(1,6)  RC(1,7)  RC(1,8)  RC(1,9)  RC(1,10)  RC(1,11)
+   RC(2,0)  RC(2,1)  RC(2,2)  RC(2,3)  RC(2,4)  RC(2,5)             RC(2,6)  RC(2,7)  RC(2,8)  RC(2,9)  RC(2,10)  RC(2,11)
+   RC(3,0)  RC(3,1)  RC(3,2)  RC(3,3)  RC(3,4)  RC(3,5)             RC(3,6)  RC(3,7)  RC(3,8)  RC(3,9)  RC(3,10)  RC(3,11)
+                     RC(4,1)  RC(4,2)  RC(4,3)  RC(4,5)             RC(4,6)  RC(4,8)  RC(4,9)  RC(4,10)
+                                       RC(6,5)  RC(5,5)             RC(6,9)  RC(5,8)
+                              RC(6,3)  RC(6,4)  RC(5,3)             RC(6,8)  RC(5,7)  RC(5,6)
+                                                RC(5,2)             RC(6,6)
+        >;
+    };
+};
+
+&pwm0 {
+	status = "okay";
+	ch0-pin = <28>;
+	ch0-inverted;
+	ch1-pin = <2>;
+	ch1-inverted;
+	ch2-pin = <26>;
+	ch2-inverted;
+	ch3-pin = <7>;
+	ch3-inverted;
+};
+
+&adc {
+	status = "okay";
+};
+
+/* MCP23s17 GPIO Expander */
+&feather_spi {
+    label="SPI1";
+    status = "okay";
+    cs-gpios = <&feather_header 14 1>;
+    compatible = "nordic,nrf-spi";
+    sck-pin = <14>;
+    mosi-pin = <13>;
+    miso-pin = <15>;
+
+    spi_gpio: mcp23s17@0 {	
+        status = "okay";
+    	label="mcp23s17";
+        compatible = "microchip,mcp23s17";
+        gpio-controller;
+        #gpio-cells = <2>;
+        spi-max-frequency = <800000>;
+        reg = <0>;
+	    ngpios = <16>;
+    };
+};
+
+&flash0 {
+    /delete-node/ partitions;
+};
+
+&flash0 {
+	partitions {
+		compatible = "fixed-partitions";
+		#address-cells = <1>;
+		#size-cells = <1>;
+
+		sd_partition: partition@0 {
+			label = "softdevice";
+			reg = <0x00000000 0x00026000>;
+		};
+		code_partition: partition@26000 {
+			label = "code_partition";
+			reg = <0x00026000 0x000c6000>;
+		};
+
+		/*
+		 * The flash starting at 0x000ec000 and ending at
+		 * 0x000f3fff is reserved for use by the application.
+		 */
+
+		/*
+		 * Storage partition will be used by FCB/LittleFS/NVS
+		 * if enabled.
+		 */
+		storage_partition: partition@ec000 {
+			label = "storage";
+			reg = <0x000ec000 0x00008000>;
+		};
+
+		boot_partition: partition@f4000 {
+			label = "adafruit_boot";
+			reg = <0x000f4000 0x0000c000>;
+		};
+	};
+};
