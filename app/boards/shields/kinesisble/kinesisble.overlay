@@ -213,7 +213,7 @@ default_transform: keymap_transform_0 {
     label="SPI1";
     status = "okay";
     cs-gpios = <&feather_header 14 1>;
-    compatible = "nordic,nrf-spi";
+    compatible = "nordic,nrf-spim";
     sck-pin = <14>;
     mosi-pin = <13>;
     miso-pin = <15>;
